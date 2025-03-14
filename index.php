@@ -52,7 +52,7 @@ $gps = array();
     <meta name="description"
         content="Retrouvez l'ensemble des courses Trail Runner Foundation adhérentes et labélisées">
     <meta name="author" content="Trail Runner Foundation">
-    <title>Annuaire Courses Trail Runner Foundation</title>
+    <title>Annuaire- Courses Trail Runner Foundation</title>
 
     <!-- Favicons-->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
