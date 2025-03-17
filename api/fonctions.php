@@ -1,27 +1,26 @@
 <?php
 
 
-function sendmailRporg($emailOrganisateur,$titre ,$contenu, $libelleBouton,$lienBouton, $template)
+function sendmailRporg($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template)
 {
     //*********************************************************************
     // ENVOI EMAIL
     //*********************************************************************
     $ch = curl_init();
-    $params=array(
-    "emailExpediteur" =>"contact@trailrunnerfoundation.com",
-    "nomExpediteur" =>"Trail Runner Foundation",
-    "emailDestinataire" =>$emailOrganisateur,
-    "numeroTemplate" =>$template,
-    "tag_titre" =>$titre,
-    "tag_contenu" =>$contenu,
-    "tag_lienbouton" =>$lienBouton,
-    "tag_libellebouton" =>$libelleBouton,
-    "sujet" =>"votre compte Trail Runner Foundation"
+    $params = array(
+        "emailExpediteur" => "contact@trailrunnerfoundation.com",
+        "nomExpediteur" => "Trail Runner Foundation",
+        "emailDestinataire" => $emailOrganisateur,
+        "numeroTemplate" => $template,
+        "titre" => $titre,
+        "contenu" => $contenu,
+        "lienbouton" => $lienBouton,
+        "libellebouton" => $libelleBouton,
+        "sujet" => "votre compte Trail Runner Foundation"
     );
 
-    try
-    {
-        
+    try {
+
         curl_setopt($ch, CURLOPT_URL, "https://remyperret.org/api/sendmail/");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
@@ -35,94 +34,161 @@ function sendmailRporg($emailOrganisateur,$titre ,$contenu, $libelleBouton,$lien
 
         $response = curl_exec($ch);
 
-        if (curl_errno($ch))
-        {
+        if (curl_errno($ch)) {
             echo curl_error($ch);
             die();
         }
 
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if($http_code == intval(200))
-        {
-            $messageConfirmation="Message reçu. Nous vous répondons dans les plus bref délais.";
-        }
-        else
-        {
+        if ($http_code == intval(200)) {
+            $messageConfirmation = "Message reçu. Nous vous répondons dans les plus bref délais.";
+        } else {
             echo "Ressource introuvable : " . $http_code;
         }
-    }
-    catch (\Throwable $th)
-    {
+    } catch (\Throwable $th) {
         throw $th;
-    }
-    finally
-    {
+    } finally {
         curl_close($ch);
     }
 
-        $messageConfirmation="Message reçu. Nous vous répondons dans les plus bref délais.";
-        return $messageConfirmation;
+    $messageConfirmation = "Message reçu. Nous vous répondons dans les plus bref délais.";
+    return $messageConfirmation;
 }
+
+
+
+function sendMailMailjet($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template)
+{
+    // Vos identifiants Mailjet
+    $apiKey = 'f5cce6f3c1cd07ff3c7045e0007a663e';
+    $apiSecret = 'b50ae69f9d0e26ff38b53ee6d37fcfde';
+
+    // Endpoint Mailjet pour l'envoi de mails via l'API v3.1
+    $url = "https://api.mailjet.com/v3.1/send";
+
+    // Construction de la charge utile
+    $payload = [
+        "Messages" => [
+            [
+                "From" => [
+                    "Email" => "contact@trailrunnerfoundation.com",
+                    "Name"  => "Trail Runner Foundation"
+                ],
+                "To" => [
+                    [
+                        "Email" => $emailOrganisateur,
+                        "Name"  => ""  // Vous pouvez préciser un nom si besoin
+                    ]
+                ],
+                "TemplateID" => $template,
+                "TemplateLanguage" => true,
+                "Subject" => "votre compte Trail Runner Foundation",
+                "Variables" => [
+                    "titre"         => $titre,
+                    "contenu"       => $contenu,
+                    "lienbouton"    => $lienBouton,
+                    "libellebouton" => $libelleBouton
+                ]
+            ]
+        ]
+    ];
+
+    $jsonData = json_encode($payload);
+
+    // Initialisation de cURL
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    // Authentification basique avec vos identifiants Mailjet
+    curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":" . $apiSecret);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+    try {
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            $error_msg = curl_error($ch);
+            throw new Exception("Erreur cURL lors de l'envoi : " . $error_msg);
+        }
+
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($http_code != 200 && $http_code != 201) {
+            throw new Exception("Erreur lors de l'envoi de l'email, code HTTP : " . $http_code . " Réponse : " . $response);
+        }
+    } catch (Exception $e) {
+        // Vous pouvez loguer l'erreur ici selon votre système de logs
+        curl_close($ch);
+        throw $e;
+    }
+
+    curl_close($ch);
+
+    return "Message envoyé avec succès via Mailjet.";
+}
+
+
 
 function getDroitsUtilisateur($idUtilisateur, $dbh)
 {
-    $requete="SELECT idCourse from utilisateur U inner join droit D on D.idUtilisateur=U.idUtilisateur where U.idUtilisateur=".$idUtilisateur;
+    $requete = "SELECT idCourse from utilisateur U inner join droit D on D.idUtilisateur=U.idUtilisateur where U.idUtilisateur=" . $idUtilisateur;
     $idsCourse = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    foreach ($lignes as $colonne)
-    {
-        $idsCourse[]=$colonne->idCourse;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    foreach ($lignes as $colonne) {
+        $idsCourse[] = $colonne->idCourse;
     }
-    
+
     return $idsCourse;
-    
 }
 
 function createUtilisateur($dbh)
-{    
-    $profil=0;
-    $nomUtilisateur="NOUVEAU";
-    $prenomUtilisateur="Utilisateur";
+{
+    $profil = 0;
+    $nomUtilisateur = "NOUVEAU";
+    $prenomUtilisateur = "Utilisateur";
     $reqInsert = $dbh->prepare("INSERT INTO utilisateur (profilUtilisateur, nomUtilisateur, prenomUtilisateur) VALUES (?,?,?)");
     $reqInsert->bindParam(1, $profil);
     $reqInsert->bindParam(2, $nomUtilisateur);
     $reqInsert->bindParam(3, $prenomUtilisateur);
-    $return=$reqInsert->execute();
-    $idUtilisateur=$dbh->lastInsertId();
+    $return = $reqInsert->execute();
+    $idUtilisateur = $dbh->lastInsertId();
 
 
-    
+
     return $idUtilisateur;
 }
 
-function getCoursesFromIdCourse($idCourse,$dbh)
+function getCoursesFromIdCourse($idCourse, $dbh)
 {
-    $requete="SELECT C.libelleCourse, C.villeCourse, C.codepostalCourse, D.idDroit, C.idCourse from course C inner join droit D on D.idCourse=C.idCourse and C.idCourse=".$idCourse;
+    $requete = "SELECT C.libelleCourse, C.villeCourse, C.codepostalCourse, D.idDroit, C.idCourse from course C inner join droit D on D.idCourse=C.idCourse and C.idCourse=" . $idCourse;
     $array = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    foreach ($lignes as $colonne)
-    {
-        $array['idDroit']=$colonne->idDroit;
-        $array['idCourse']=$colonne->idCourse;
-        $array['libelleCourse']=$colonne->libelleCourse;
-        $array['villeCourse']=$colonne->villeCourse;
-        $array['codepostalCourse']=$colonne->codepostalCourse;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    foreach ($lignes as $colonne) {
+        $array['idDroit'] = $colonne->idDroit;
+        $array['idCourse'] = $colonne->idCourse;
+        $array['libelleCourse'] = $colonne->libelleCourse;
+        $array['villeCourse'] = $colonne->villeCourse;
+        $array['codepostalCourse'] = $colonne->codepostalCourse;
     }
-    
+
     return $array;
 }
 
 function createCourse($dbh)
-{    
-    $latitudeCourse="4.5";
-    $longitudeCourse="1.5";
-    $libelleCourse="Nouvelle course";
-    $active=1;
-    
+{
+    $latitudeCourse = "4.5";
+    $longitudeCourse = "1.5";
+    $libelleCourse = "Nouvelle course";
+    $active = 1;
+
     $reqInsert = $dbh->prepare("INSERT INTO course (latitudeCourse,longitudeCourse,libelleCourse,activeCourse) VALUES (?,?,?,?)");
 
     $reqInsert->bindParam(1, $latitudeCourse);
@@ -130,64 +196,63 @@ function createCourse($dbh)
     $reqInsert->bindParam(3, $libelleCourse);
     $reqInsert->bindParam(4, $active);
 
-    $return=$reqInsert->execute();
-    $idCourse=$dbh->lastInsertId();
-    
+    $return = $reqInsert->execute();
+    $idCourse = $dbh->lastInsertId();
+
     return $idCourse;
 }
 
-function deleteCourse($idCourse,$dbh)
+function deleteCourse($idCourse, $dbh)
 {
-    $return=false;
-    $idCourse=intval($idCourse);
-    
+    $return = false;
+    $idCourse = intval($idCourse);
+
     $reqDelete = $dbh->prepare("DELETE FROM droit where idCourse=?");
-    $reqDelete->bindParam(1,$idCourse);
-    $return=$reqDelete->execute();
-    
+    $reqDelete->bindParam(1, $idCourse);
+    $return = $reqDelete->execute();
+
     $reqDelete = $dbh->prepare("DELETE FROM mot where idCourse=?");
-    $reqDelete->bindParam(1,$idCourse);
-    $return=$reqDelete->execute();
-    
+    $reqDelete->bindParam(1, $idCourse);
+    $return = $reqDelete->execute();
+
     $reqDelete = $dbh->prepare("DELETE FROM photo where idCourse=?");
-    $reqDelete->bindParam(1,$idCourse);
-    $return=$reqDelete->execute();
-    
+    $reqDelete->bindParam(1, $idCourse);
+    $return = $reqDelete->execute();
+
     $reqDelete = $dbh->prepare("DELETE FROM course where idCourse=?");
-    $reqDelete->bindParam(1,$idCourse);
-    $return=$reqDelete->execute();
+    $reqDelete->bindParam(1, $idCourse);
+    $return = $reqDelete->execute();
 
     return $return;
 }
 
-function deleteUtilisateur($idUtilisateur,$dbh)
+function deleteUtilisateur($idUtilisateur, $dbh)
 {
-    $return1=false;
-    $return2=false;
-    
+    $return1 = false;
+    $return2 = false;
+
     $reqDelete = $dbh->prepare("DELETE FROM droit where idUtilisateur=?");
     $reqDelete->bindParam(1, $idUtilisateur);
-    $return1=$reqDelete->execute();
+    $return1 = $reqDelete->execute();
 
-    
+
     $reqDelete = $dbh->prepare("DELETE FROM utilisateur where idUtilisateur=?");
     $reqDelete->bindParam(1, $idUtilisateur);
-    $return2=$reqDelete->execute();
+    $return2 = $reqDelete->execute();
 
-    return $return1 && $return2 ;
+    return $return1 && $return2;
 }
 
 function getCenterLatLng($coordinates)
 {
     $x = $y = $z = 0;
     $n = count($coordinates);
-    foreach ($coordinates as $point)
-    {
-    $lt = $point[0] * pi() / 180;
-    $lg = $point[1] * pi() / 180;
-    $x += cos($lt) * cos($lg);
-    $y += cos($lt) * sin($lg);
-    $z += sin($lt);
+    foreach ($coordinates as $point) {
+        $lt = $point[0] * pi() / 180;
+        $lg = $point[1] * pi() / 180;
+        $x += cos($lt) * cos($lg);
+        $y += cos($lt) * sin($lg);
+        $z += sin($lt);
     }
     $x /= $n;
     $y /= $n;
@@ -197,272 +262,254 @@ function getCenterLatLng($coordinates)
 
 function getTypeCourse($typeCourse)
 {
-    $libelle=NULL;
-    switch ($typeCourse) 
-    {
-    case 0:
-        $libelle="Adhérente";
-        break;
-    case 1:
-        $libelle="Labelisée";
-        break;
-    }   
+    $libelle = NULL;
+    switch ($typeCourse) {
+        case 0:
+            $libelle = "Adhérente";
+            break;
+        case 1:
+            $libelle = "Labelisée";
+            break;
+    }
     return $libelle;
 }
 
 function getClassCssTypeCourse($statut)
 {
-    $class=NULL;
-        switch ($statut) {
-    case 0:
-        $class="consultable";
-        break;
-    case 1:
-        $class="approved";
-        break;
-        }
-    
+    $class = NULL;
+    switch ($statut) {
+        case 0:
+            $class = "consultable";
+            break;
+        case 1:
+            $class = "approved";
+            break;
+    }
+
     return $class;
-        
 }
 
 
 function getDepartements($dbh)
 {
-    $requete="SELECT * from departement";
+    $requete = "SELECT * from departement";
     $array = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    foreach ($lignes as $colonne)
-    {
-        $numDep2Digits=$colonne->numDepartement;
-        if(strlen($colonne->numDepartement)==1) $numDep2Digits="0".$colonne->numDepartement;
-        $array[$numDep2Digits]=$colonne->libelleDepartement;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    foreach ($lignes as $colonne) {
+        $numDep2Digits = $colonne->numDepartement;
+        if (strlen($colonne->numDepartement) == 1) $numDep2Digits = "0" . $colonne->numDepartement;
+        $array[$numDep2Digits] = $colonne->libelleDepartement;
     }
-    
+
     return $array;
 }
 
 
 
-function getListImages($idCourse,$dbh)
+function getListImages($idCourse, $dbh)
 {
-    $requete="SELECT * from photo where idCourse=".$idCourse;
+    $requete = "SELECT * from photo where idCourse=" . $idCourse;
     $array = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    $i=0;
-    foreach ($lignes as $colonne)
-    {
-        $array[$i]['idPhoto']=$colonne->idPhoto;
-        $array[$i]['idCourse']=$colonne->idCourse;
-        $array[$i]['nomPhoto']=$colonne->nomPhoto;
-        $array[$i]['typePhoto']=$colonne->typePhoto;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    $i = 0;
+    foreach ($lignes as $colonne) {
+        $array[$i]['idPhoto'] = $colonne->idPhoto;
+        $array[$i]['idCourse'] = $colonne->idCourse;
+        $array[$i]['nomPhoto'] = $colonne->nomPhoto;
+        $array[$i]['typePhoto'] = $colonne->typePhoto;
         $i++;
     }
-    
+
     return $array;
 }
 
-function insertImage($idCourse,$referenceImage,$typePhoto,$dbh)
+function insertImage($idCourse, $referenceImage, $typePhoto, $dbh)
 {
     $reqInsert = $dbh->prepare("INSERT INTO photo (idCourse,nomPhoto,typePhoto) VALUES (?,?,?)");
     $reqInsert->bindParam(1, $idCourse);
     $reqInsert->bindParam(2, $referenceImage);
     $reqInsert->bindParam(3, $typePhoto);
-    
-    $etatExecution=$reqInsert->execute();
-    $idImage=$dbh->lastInsertId();
+
+    $etatExecution = $reqInsert->execute();
+    $idImage = $dbh->lastInsertId();
 
     return $idImage;
 }
 
 function getTypeImage($typeImage)
 {
-    $libelle=NULL;
-    switch ($typeImage) 
-    {
+    $libelle = NULL;
+    switch ($typeImage) {
         case 0:
-            $libelle="Diaporama";
+            $libelle = "Diaporama";
             break;
         case 1:
-            $libelle="Grand bandeau";
+            $libelle = "Grand bandeau";
             break;
         case 2:
-            $libelle="Vignette";
+            $libelle = "Vignette";
             break;
     }
     return $libelle;
 }
 
-function deleteDroit($idDroit,$dbh)
+function deleteDroit($idDroit, $dbh)
 {
-    $exec=false;
-    
+    $exec = false;
+
     // Suppression du droit
     $reqDelete = $dbh->prepare("DELETE FROM droit where idDroit=?");
     $reqDelete->bindParam(1, $idDroit);
-    $exec=$reqDelete->execute();
-    
-    return $exec ;
+    $exec = $reqDelete->execute();
+
+    return $exec;
 }
 
-function getInfosCourseUtilisateur($idUtilisateur,$idCourse,$dbh)
+function getInfosCourseUtilisateur($idUtilisateur, $idCourse, $dbh)
 {
-    $emailOrganisateur=NULL;
-    $prenom=NULL;
-    $nom=NULL;
-    $libelleCourse=NULL;
-     
+    $emailOrganisateur = NULL;
+    $prenom = NULL;
+    $nom = NULL;
+    $libelleCourse = NULL;
+
     //INFOS USER
-    $requete="SELECT * from utilisateur where idUtilisateur=".$idUtilisateur;
+    $requete = "SELECT * from utilisateur where idUtilisateur=" . $idUtilisateur;
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    foreach ($lignes as $colonne)
-    {
-        $emailOrganisateur=$colonne->emailUtilisateur;
-        $prenom=$colonne->prenomUtilisateur;
-        $nom=$colonne->nomUtilisateur;        
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    foreach ($lignes as $colonne) {
+        $emailOrganisateur = $colonne->emailUtilisateur;
+        $prenom = $colonne->prenomUtilisateur;
+        $nom = $colonne->nomUtilisateur;
     }
-    
+
     //INFOS COURSE
-    $requete="SELECT libelleCourse from course where idCourse=".$idCourse;
+    $requete = "SELECT libelleCourse from course where idCourse=" . $idCourse;
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    foreach ($lignes as $colonne)
-    {
-        $libelleCourse=$colonne->libelleCourse;      
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    foreach ($lignes as $colonne) {
+        $libelleCourse = $colonne->libelleCourse;
     }
-    
-    return array($emailOrganisateur,$prenom,$nom,$libelleCourse);
-    
+
+    return array($emailOrganisateur, $prenom, $nom, $libelleCourse);
 }
 
-function createDroit($idUtilisateur,$idCourse,$dbh)
+function createDroit($idUtilisateur, $idCourse, $dbh)
 {
-    $return=false;
+    $return = false;
     $reqInsert = $dbh->prepare("INSERT INTO droit (idUtilisateur,idCourse) VALUES (?,?)");
     $reqInsert->bindParam(1, $idUtilisateur);
     $reqInsert->bindParam(2, $idCourse);
-    $return=$reqInsert->execute();
-    
-    $infos=getInfosCourseUtilisateur($idUtilisateur,$idCourse,$dbh);
-    
-    // GET INFO COURSE / USER
-    $template="4";
-    $emailOrganisateur=$infos[0];
-    $prenom=$infos[1];
-    $nom=$infos[2];
-    $libelleCourse=$infos[3];
-    
-    
-    
-    $titre="Nouvel accès à une course";
-    $contenu="Bonjour ".$prenom." ".$nom.",<br><br>";
-    $contenu.="Vous venez de récupérer les droits d'accès administrateur pour la course ".$libelleCourse;
-    $contenu.="<br><br>Vous pouvez dès à présent cliquer sur le lien ci dessous, vous connecter et accéder à la page de personnalisation de votre évènement.";
-    $libelleBouton="Paramétrer votre course";
-    $lienBouton="https://agenda.trailrunnerfoundation.com/admin/detailCourse.php?idC=".$idCourse;
+    $return = $reqInsert->execute();
 
-    sendmailRporg($emailOrganisateur,$titre ,$contenu, $libelleBouton,$lienBouton, $template);    
+    $infos = getInfosCourseUtilisateur($idUtilisateur, $idCourse, $dbh);
+
+    // GET INFO COURSE / USER
+    $template = "4";
+    $emailOrganisateur = $infos[0];
+    $prenom = $infos[1];
+    $nom = $infos[2];
+    $libelleCourse = $infos[3];
+
+
+
+    $titre = "Nouvel accès à une course";
+    $contenu = "Bonjour " . $prenom . " " . $nom . ",<br><br>";
+    $contenu .= "Vous venez de récupérer les droits d'accès administrateur pour la course " . $libelleCourse;
+    $contenu .= "<br><br>Vous pouvez dès à présent cliquer sur le lien ci dessous, vous connecter et accéder à la page de personnalisation de votre évènement.";
+    $libelleBouton = "Paramétrer votre course";
+    $lienBouton = "https://agenda.trailrunnerfoundation.com/admin/detailCourse.php?idC=" . $idCourse;
+
+    sendmailRporg($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template);
 
     return $return;
 }
 
-function deleteImage($idPhoto,$cheminAbsolu,$dbh)
+function deleteImage($idPhoto, $cheminAbsolu, $dbh)
 {
     //****RECUPERATION NOM FICHIER A SUPPRIMER****
     $resultats = $dbh->query('SET NAMES UTF8');
-    $resultats = $dbh->query("SELECT * from photo where idPhoto=".$idPhoto);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    $nomPhoto=NULL;
-    foreach ($lignes as $colonne)
-    {
-        $nomPhoto=$colonne->nomPhoto;
+    $resultats = $dbh->query("SELECT * from photo where idPhoto=" . $idPhoto);
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    $nomPhoto = NULL;
+    foreach ($lignes as $colonne) {
+        $nomPhoto = $colonne->nomPhoto;
     }
-    
+
 
     //****DELETE BDD****
-    $exec=false;
+    $exec = false;
     $reqDelete = $dbh->prepare("DELETE FROM photo where idPhoto=?");
-    $reqDelete->bindParam(1,$idPhoto);
-    $exec=$reqDelete->execute();
-    
-        
+    $reqDelete->bindParam(1, $idPhoto);
+    $exec = $reqDelete->execute();
+
+
     //****DELETE BDD****
-    if($exec)
-    {
-        unlink($cheminAbsolu.$nomPhoto);
+    if ($exec) {
+        unlink($cheminAbsolu . $nomPhoto);
     }
 
     return $exec;
 }
 
-function uploadImage($file,$idCourse, $cheminAbsolu,$typePhoto,$dbh)
+function uploadImage($file, $idCourse, $cheminAbsolu, $typePhoto, $dbh)
 {
     //*********GESTION IMAGES****************
-    $errorUpload=NULL;
-    $uploadEnCours=false;
-    $uploadImageFinal=NULL;
+    $errorUpload = NULL;
+    $uploadEnCours = false;
+    $uploadImageFinal = NULL;
     $image_file = $file;
 
     // Exit if no file uploaded
-    if (!isset($image_file)) 
-    {
-        $uploadEnCours=true;
+    if (!isset($image_file)) {
+        $uploadEnCours = true;
     }
 
     // Exit if image file is zero bytes
-    if (filesize($image_file["tmp_name"]) <= 0) 
-    {
-        $errorUpload="Le fichier est vide";
+    if (filesize($image_file["tmp_name"]) <= 0) {
+        $errorUpload = "Le fichier est vide";
     }
 
     // Exit if is not a valid image file
     $image_type = exif_imagetype($image_file["tmp_name"]);
-    if (!$image_type) 
-    {
-       $errorUpload="Le fichier n'est pas une image valide";
+    if (!$image_type) {
+        $errorUpload = "Le fichier n'est pas une image valide";
     }
     // Get file extension based on file type, to prepend a dot we pass true as the second parameter
     $image_extension = image_type_to_extension($image_type, true);
     $image_name = bin2hex(random_bytes(16)) . $image_extension;
-    $uploadImageFinal=move_uploaded_file($image_file["tmp_name"], $cheminAbsolu . $image_name);
-    
-    if($uploadImageFinal)  insertImage($idCourse,$image_name,$typePhoto,$dbh);
-    
-    return array($uploadEnCours,$uploadImageFinal,$errorUpload,$image_name,__DIR__ . "/images/" . $image_name);
+    $uploadImageFinal = move_uploaded_file($image_file["tmp_name"], $cheminAbsolu . $image_name);
+
+    if ($uploadImageFinal)  insertImage($idCourse, $image_name, $typePhoto, $dbh);
+
+    return array($uploadEnCours, $uploadImageFinal, $errorUpload, $image_name, __DIR__ . "/images/" . $image_name);
 }
 
-function arfUploadImage($fichier,$nomFichier,$idEvenement,$dateCreationImage,$typeImage,$idImageParent,$dbh)
+function arfUploadImage($fichier, $nomFichier, $idEvenement, $dateCreationImage, $typeImage, $idImageParent, $dbh)
 {
-    $return=array();
-    $return['ecritureFichierImage']=false;
-    $return['ecritureBddImage']=false;
-    $dateReceptionImage=date('Y-m-d H:i:s');
-    
-    try 
-    {
+    $return = array();
+    $return['ecritureFichierImage'] = false;
+    $return['ecritureBddImage'] = false;
+    $dateReceptionImage = date('Y-m-d H:i:s');
+
+    try {
         $nomFichierFinal = $nomFichier;
         $current = file_get_contents($fichier['tmp_name']);
-        $result=file_put_contents(dirname(__DIR__, 1)."/photos/".$nomFichierFinal, $current);
-        $return['ecritureFichierImage']=false;     
-        if($result>0) $return['ecritureFichierImage']=true;
-    }
-    catch (Exception $e) 
-    {
-        $return['ecritureFichierImage']=false;
-        $return['errorDetailEcritureFichierImage']=$e->getMessage();
+        $result = file_put_contents(dirname(__DIR__, 1) . "/photos/" . $nomFichierFinal, $current);
+        $return['ecritureFichierImage'] = false;
+        if ($result > 0) $return['ecritureFichierImage'] = true;
+    } catch (Exception $e) {
+        $return['ecritureFichierImage'] = false;
+        $return['errorDetailEcritureFichierImage'] = $e->getMessage();
     }
 
-    if($return['ecritureFichierImage'])
-    {
-        try 
-        {
+    if ($return['ecritureFichierImage']) {
+        try {
             $reqInsert = $dbh->prepare("INSERT INTO image (idEvenement,nomImage,dateCreationImage,dateReceptionImage,typeImage,idImageParent) VALUES (?,?,?,?,?,?)");
             $reqInsert->bindParam(1, $idEvenement);
             $reqInsert->bindParam(2, $nomFichierFinal);
@@ -470,44 +517,39 @@ function arfUploadImage($fichier,$nomFichier,$idEvenement,$dateCreationImage,$ty
             $reqInsert->bindParam(4, $dateReceptionImage);
             $reqInsert->bindParam(5, $typeImage);
             $reqInsert->bindParam(6, $idImageParent);
-            $etatExecution=$reqInsert->execute();
-            $idImage=$dbh->lastInsertId();
-            $return['ecritureBddImage']=$etatExecution;
-            $return['idImage']=$idImage;
-        } 
-        catch (Exception $e) 
-        {
-            $return['ecritureBddImage']=false;
-            $return['idImage']=NULL;
-            $return['errorDetailEcritureBddImage']=$e->getMessage();
+            $etatExecution = $reqInsert->execute();
+            $idImage = $dbh->lastInsertId();
+            $return['ecritureBddImage'] = $etatExecution;
+            $return['idImage'] = $idImage;
+        } catch (Exception $e) {
+            $return['ecritureBddImage'] = false;
+            $return['idImage'] = NULL;
+            $return['errorDetailEcritureBddImage'] = $e->getMessage();
         }
-        
     }
-    
-    
+
+
     return $return;
 }
 
-function getPhotosCourse($idCourse,$dbh)
+function getPhotosCourse($idCourse, $dbh)
 {
-    $requete=NULL;
-    $requete="SELECT * from photo";
-    if($idCourse!="" && $idCourse!=NULL)
-    {
-        $requete="SELECT * FROM photo where idCourse=".$idCourse;
+    $requete = NULL;
+    $requete = "SELECT * from photo";
+    if ($idCourse != "" && $idCourse != NULL) {
+        $requete = "SELECT * FROM photo where idCourse=" . $idCourse;
     }
-    
+
     $array = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    $i=0;
-    foreach ($lignes as $colonne)
-    {
-        $array[$i]['idPhoto']=$colonne->idPhoto;
-        $array[$i]['idCourse']=$colonne->idCourse;
-        $array[$i]['nomPhoto']=$colonne->nomPhoto;
-        $array[$i]['typePhoto']=$colonne->typePhoto;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    $i = 0;
+    foreach ($lignes as $colonne) {
+        $array[$i]['idPhoto'] = $colonne->idPhoto;
+        $array[$i]['idCourse'] = $colonne->idCourse;
+        $array[$i]['nomPhoto'] = $colonne->nomPhoto;
+        $array[$i]['typePhoto'] = $colonne->typePhoto;
         $i++;
     }
     return $array;
@@ -569,315 +611,283 @@ function getCourses($idCourse,$keyWord,$dateDebut,$dateFin,$typeCourse,$dbh)
 }
 */
 
-function getCourses($idCourse,$keyWord,$dateDebut,$dateFin,$typeCourse,$departement,$dbh)
+function getCourses($idCourse, $keyWord, $dateDebut, $dateFin, $typeCourse, $departement, $dbh)
 {
-    $requete=NULL;
-    $whereDate=NULL;
-    $whereType=NULL;
-    $whereDepartement=NULL;
-    
-    if($dateDebut!='' && $dateDebut!=NULL)
-    {
-        $whereDate=" AND dateDebutCourse>='".$dateDebut."' AND dateFinCourse<='".$dateFin."' ";
+    $requete = NULL;
+    $whereDate = NULL;
+    $whereType = NULL;
+    $whereDepartement = NULL;
+
+    if ($dateDebut != '' && $dateDebut != NULL) {
+        $whereDate = " AND dateDebutCourse>='" . $dateDebut . "' AND dateFinCourse<='" . $dateFin . "' ";
     }
-    
-    if($typeCourse!='' && $typeCourse!=NULL)
-    {
-        $whereType=" AND typeCourse=".$typeCourse." ";
+
+    if ($typeCourse != '' && $typeCourse != NULL) {
+        $whereType = " AND typeCourse=" . $typeCourse . " ";
     }
-    
-    if($departement!='' && $departement!=NULL)
-    {
-        if(strlen($departement)==1) $departement="0".$departement;
-        $whereDepartement=" AND codepostalCourse LIKE '".$departement."%' ";
+
+    if ($departement != '' && $departement != NULL) {
+        if (strlen($departement) == 1) $departement = "0" . $departement;
+        $whereDepartement = " AND codepostalCourse LIKE '" . $departement . "%' ";
     }
-    
-    
-    
-    $requete="SELECT * from course where activeCourse=1 ".$whereDate.$whereType.$whereDepartement." ORDER BY 
+
+
+
+    $requete = "SELECT * from course where activeCourse=1 " . $whereDate . $whereType . $whereDepartement . " ORDER BY 
   CASE 
     WHEN dateDebutCourse >= CURDATE() THEN 0 
     ELSE 1 
   END,
   ABS(DATEDIFF(dateDebutCourse, CURDATE()))";
-    
 
-    if($keyWord!="" && $keyWord!=NULL)
-    {
-            $requete="SELECT
+
+    if ($keyWord != "" && $keyWord != NULL) {
+        $requete = "SELECT
                 *,
-                MATCH(libelleCourse) AGAINST('".$keyWord."')  AS  score_libelleCourse,
-                MATCH(descriptionCourse) AGAINST('".$keyWord."') AS score_descriptionCourse,
-                MATCH(villeCourse) AGAINST('".$keyWord."') AS score_villeCourse,
-                MATCH(codepostalCourse) AGAINST('".$keyWord."') AS score_codepostalCourse
+                MATCH(libelleCourse) AGAINST('" . $keyWord . "')  AS  score_libelleCourse,
+                MATCH(descriptionCourse) AGAINST('" . $keyWord . "') AS score_descriptionCourse,
+                MATCH(villeCourse) AGAINST('" . $keyWord . "') AS score_villeCourse,
+                MATCH(codepostalCourse) AGAINST('" . $keyWord . "') AS score_codepostalCourse
                 FROM course
                 WHERE
                 activeCourse=1 AND
                 (
-                MATCH(libelleCourse) AGAINST('".$keyWord."') OR
-                MATCH(descriptionCourse) AGAINST('".$keyWord."') OR
-                MATCH(villeCourse) AGAINST('".$keyWord."') OR
-                MATCH(codepostalCourse) AGAINST('".$keyWord."') 
-                ) ".$whereDate." ".$whereType." ".$whereDepartement."
+                MATCH(libelleCourse) AGAINST('" . $keyWord . "') OR
+                MATCH(descriptionCourse) AGAINST('" . $keyWord . "') OR
+                MATCH(villeCourse) AGAINST('" . $keyWord . "') OR
+                MATCH(codepostalCourse) AGAINST('" . $keyWord . "') 
+                ) " . $whereDate . " " . $whereType . " " . $whereDepartement . "
                 ORDER BY (score_libelleCourse+score_descriptionCourse*0.5+score_villeCourse*0.1) DESC, CASE 
     WHEN dateDebutCourse >= CURDATE() THEN 0 
     ELSE 1 
   END,
   ABS(DATEDIFF(dateDebutCourse, CURDATE()))";
     }
-    
-    
-    if($idCourse!="" && $idCourse!=NULL)
-    {
-        $requete="SELECT * FROM course where activeCourse=1 AND idCourse=".$idCourse;
+
+
+    if ($idCourse != "" && $idCourse != NULL) {
+        $requete = "SELECT * FROM course where activeCourse=1 AND idCourse=" . $idCourse;
     }
-    
+
     $array = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    $i=0;
-    foreach ($lignes as $colonne)
-    {
-        $array[$i]['idCourse']=$colonne->idCourse;
-        $array[$i]['latitudeCourse']=$colonne->latitudeCourse;
-        $array[$i]['longitudeCourse']=$colonne->longitudeCourse;
-        $array[$i]['dateDebutCourse']=$colonne->dateDebutCourse;
-        $array[$i]['dateFinCourse']=$colonne->dateFinCourse;
-        $array[$i]['libelleCourse']=$colonne->libelleCourse;
-        $array[$i]['descriptionCourse']=$colonne->descriptionCourse;
-        $array[$i]['sitewebCourse']=$colonne->sitewebCourse;
-        $array[$i]['villeCourse']=$colonne->villeCourse;
-        $array[$i]['codepostalCourse']=$colonne->codepostalCourse;
-        $array[$i]['paysCourse']=$colonne->paysCourse;
-        $array[$i]['distanceMinCourse']=$colonne->distanceMinCourse;
-        $array[$i]['distanceMaxCourse']=$colonne->distanceMaxCourse;
-        $array[$i]['typeCourse']=getTypeCourse($colonne->typeCourse);
-        $array[$i]['typeCourseCode']=$colonne->typeCourse;
-        $array[$i]['activeCourse']=$colonne->activeCourse;
-        $array[$i]['photosCourse']=getPhotosCourse($colonne->idCourse,$dbh);
-        $array[$i]['requete']=$requete;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    $i = 0;
+    foreach ($lignes as $colonne) {
+        $array[$i]['idCourse'] = $colonne->idCourse;
+        $array[$i]['latitudeCourse'] = $colonne->latitudeCourse;
+        $array[$i]['longitudeCourse'] = $colonne->longitudeCourse;
+        $array[$i]['dateDebutCourse'] = $colonne->dateDebutCourse;
+        $array[$i]['dateFinCourse'] = $colonne->dateFinCourse;
+        $array[$i]['libelleCourse'] = $colonne->libelleCourse;
+        $array[$i]['descriptionCourse'] = $colonne->descriptionCourse;
+        $array[$i]['sitewebCourse'] = $colonne->sitewebCourse;
+        $array[$i]['villeCourse'] = $colonne->villeCourse;
+        $array[$i]['codepostalCourse'] = $colonne->codepostalCourse;
+        $array[$i]['paysCourse'] = $colonne->paysCourse;
+        $array[$i]['distanceMinCourse'] = $colonne->distanceMinCourse;
+        $array[$i]['distanceMaxCourse'] = $colonne->distanceMaxCourse;
+        $array[$i]['typeCourse'] = getTypeCourse($colonne->typeCourse);
+        $array[$i]['typeCourseCode'] = $colonne->typeCourse;
+        $array[$i]['activeCourse'] = $colonne->activeCourse;
+        $array[$i]['photosCourse'] = getPhotosCourse($colonne->idCourse, $dbh);
+        $array[$i]['requete'] = $requete;
         $i++;
     }
-    
+
     return $array;
 }
 
 
 function getPhotosCourseFile($tableauPhotos)
 {
-    $vignette=NULL;
-    $bandeau=NULL;
-    $diaporama=array();
-    foreach($tableauPhotos as $photo)
-    {
-        if($photo['typePhoto']==0) $diaporama[]=$photo['nomPhoto'];
-        if($photo['typePhoto']==1) $bandeau=$photo['nomPhoto'];
-        if($photo['typePhoto']==2) $vignette=$photo['nomPhoto'];
+    $vignette = NULL;
+    $bandeau = NULL;
+    $diaporama = array();
+    foreach ($tableauPhotos as $photo) {
+        if ($photo['typePhoto'] == 0) $diaporama[] = $photo['nomPhoto'];
+        if ($photo['typePhoto'] == 1) $bandeau = $photo['nomPhoto'];
+        if ($photo['typePhoto'] == 2) $vignette = $photo['nomPhoto'];
     }
-    return array($vignette,$bandeau,$diaporama);
+    return array($vignette, $bandeau, $diaporama);
 }
 
-function getUtilisateurs($idUtilisateur,$profilUtilisateur,$idCourse,$dbh)
+function getUtilisateurs($idUtilisateur, $profilUtilisateur, $idCourse, $dbh)
 {
-    $requete=NULL;
-    $requete="SELECT U.*, D.idDroit, D.idCourse from utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur order by U.idUtilisateur";
-    if($idUtilisateur!="" && $idUtilisateur!=NULL)
-    {
-        $requete="SELECT U.*, D.idDroit, D.idCourse FROM utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur where U.idUtilisateur=".$idUtilisateur." order by U.idUtilisateur";
+    $requete = NULL;
+    $requete = "SELECT U.*, D.idDroit, D.idCourse from utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur order by U.idUtilisateur";
+    if ($idUtilisateur != "" && $idUtilisateur != NULL) {
+        $requete = "SELECT U.*, D.idDroit, D.idCourse FROM utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur where U.idUtilisateur=" . $idUtilisateur . " order by U.idUtilisateur";
     }
-    if($profilUtilisateur!="" && $profilUtilisateur!=NULL)
-    {
-        $requete="SELECT U.*, D.idDroit, D.idCourse FROM utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur where U.profilUtilisateur=".$profilUtilisateur." order by U.idUtilisateur";
+    if ($profilUtilisateur != "" && $profilUtilisateur != NULL) {
+        $requete = "SELECT U.*, D.idDroit, D.idCourse FROM utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur where U.profilUtilisateur=" . $profilUtilisateur . " order by U.idUtilisateur";
     }
-    if($idCourse!="" && $idCourse!=NULL)
-    {
-        $requete="SELECT U.*, D.idDroit, D.idCourse FROM utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur where D.idCourse=".$idCourse." order by U.idUtilisateur";
+    if ($idCourse != "" && $idCourse != NULL) {
+        $requete = "SELECT U.*, D.idDroit, D.idCourse FROM utilisateur U left outer join droit D on D.idUtilisateur=U.idUtilisateur where D.idCourse=" . $idCourse . " order by U.idUtilisateur";
     }
-    
+
 
     $array = array();
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    $i=-1;
-    $idUPrecedent=-1;
-    $droits=array();
-    $first=true;
-    foreach ($lignes as $colonne)
-    {
-        
-        if($idUPrecedent!=$colonne->idUtilisateur)
-        {
-            $idUPrecedent=$colonne->idUtilisateur;
-            
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    $i = -1;
+    $idUPrecedent = -1;
+    $droits = array();
+    $first = true;
+    foreach ($lignes as $colonne) {
+
+        if ($idUPrecedent != $colonne->idUtilisateur) {
+            $idUPrecedent = $colonne->idUtilisateur;
+
             //*****ON INJECTE DANS LE PRECEDENT UTILIASTEUR LES DROITS SAUF AU TOUT PREMIER PASSAGE
-            if($first)
-            {
-                $first=false;
+            if ($first) {
+                $first = false;
+            } else {
+                $array[$i]['droits'] = $droits;
             }
-            else
-            {
-                $array[$i]['droits']=$droits;
-            }
-        
+
             $i++;
-            
-            $droits=array();
-            $array[$i]['idDroit']=$colonne->idDroit;
-            $array[$i]['idUtilisateur']=$colonne->idUtilisateur;
-            $array[$i]['nomUtilisateur']=$colonne->nomUtilisateur;
-            $array[$i]['prenomUtilisateur']=$colonne->prenomUtilisateur;
-            $array[$i]['emailUtilisateur']=$colonne->emailUtilisateur;
-            $array[$i]['mobileUtilisateur']=$colonne->mobileUtilisateur;
-            $array[$i]['profilUtilisateur']=$colonne->profilUtilisateur;
+
+            $droits = array();
+            $array[$i]['idDroit'] = $colonne->idDroit;
+            $array[$i]['idUtilisateur'] = $colonne->idUtilisateur;
+            $array[$i]['nomUtilisateur'] = $colonne->nomUtilisateur;
+            $array[$i]['prenomUtilisateur'] = $colonne->prenomUtilisateur;
+            $array[$i]['emailUtilisateur'] = $colonne->emailUtilisateur;
+            $array[$i]['mobileUtilisateur'] = $colonne->mobileUtilisateur;
+            $array[$i]['profilUtilisateur'] = $colonne->profilUtilisateur;
         }
-        if($colonne->idCourse!=NULL) $droits[]=$colonne->idCourse;
-        
+        if ($colonne->idCourse != NULL) $droits[] = $colonne->idCourse;
     }
-    if($idUPrecedent!=-1) $array[$i]['droits']=$droits;
-    
+    if ($idUPrecedent != -1) $array[$i]['droits'] = $droits;
+
     return $array;
 }
 
 
-function deleteReglage($idReglagePhoto,$dbh)
+function deleteReglage($idReglagePhoto, $dbh)
 {
-    $exec=false;
-    
+    $exec = false;
+
     // Changement de tous les évenements concerné par le réglage pour mettre le réglage par défaut
     $reqUpdate = $dbh->prepare("UPDATE evenement set idReglagePhoto=1 where idReglagePhoto=?");
     $reqUpdate->bindParam(1, $idReglagePhoto);
-    $exec1=$reqUpdate->execute();
-    
+    $exec1 = $reqUpdate->execute();
+
     // Suppression du réglage
     $reqDelete = $dbh->prepare("DELETE FROM reglagePhoto where idReglagePhoto=?");
     $reqDelete->bindParam(1, $idReglagePhoto);
-    $exec2=$reqDelete->execute();
+    $exec2 = $reqDelete->execute();
 
-    
-    return $exec2 ;
+
+    return $exec2;
 }
 
-function deleteEvenement($idEvenement,$dbh)
+function deleteEvenement($idEvenement, $dbh)
 {
-    $exec=false;
+    $exec = false;
     $reqDelete = $dbh->prepare("DELETE FROM evenement where idEvenement=?");
     $reqDelete->bindParam(1, $idEvenement);
-    $exec=$reqDelete->execute();
+    $exec = $reqDelete->execute();
 
-    
-    return $exec ;
+
+    return $exec;
 }
 
-function updateCourse($idCourse,$parametres,$dbh)
+function updateCourse($idCourse, $parametres, $dbh)
 {
-    $exec=true;
-    foreach($parametres as $key=>$value)
-    {
-        if($key!="idC" && $key!="updateCourse")
-        {
-            if($value=="") $value=NULL;
-            $reqUpdate = $dbh->prepare("UPDATE course set ".$key."=? where idCourse=?");
+    $exec = true;
+    foreach ($parametres as $key => $value) {
+        if ($key != "idC" && $key != "updateCourse") {
+            if ($value == "") $value = NULL;
+            $reqUpdate = $dbh->prepare("UPDATE course set " . $key . "=? where idCourse=?");
             $reqUpdate->bindParam(1, $value);
             $reqUpdate->bindParam(2, $idCourse);
 
-            $exec1=$reqUpdate->execute();
-            if(!$exec1) $exec=false;
+            $exec1 = $reqUpdate->execute();
+            if (!$exec1) $exec = false;
         }
-
     }
     return $exec;
 }
 
-function checkPremierUpdate($idUtilisateur,$dbh)
+function checkPremierUpdate($idUtilisateur, $dbh)
 {
-    $requete="SELECT creationUtilisateur from utilisateur where idUtilisateur=".$idUtilisateur;
-    $creationUtilisateur=0;
+    $requete = "SELECT creationUtilisateur from utilisateur where idUtilisateur=" . $idUtilisateur;
+    $creationUtilisateur = 0;
     $resultats = $dbh->query('SET NAMES UTF8');
     $resultats = $dbh->query($requete);
-    $lignes=$resultats->fetchAll(PDO::FETCH_OBJ);
-    foreach ($lignes as $colonne)
-    {
-        $creationUtilisateur=$colonne->creationUtilisateur;
+    $lignes = $resultats->fetchAll(PDO::FETCH_OBJ);
+    foreach ($lignes as $colonne) {
+        $creationUtilisateur = $colonne->creationUtilisateur;
     }
-    
+
     return $creationUtilisateur;
-    
 }
 
-function updateUtilisateur($idUtilisateur,$parametres,$dbh)
+function updateUtilisateur($idUtilisateur, $parametres, $dbh)
 {
-    $passClair=NULL;
-    $emailLogin=NULL;
-    $nom=NULL;
-    $prenom=NULL;
-    $premierUpdate=checkPremierUpdate($idUtilisateur,$dbh);
-    $exec=true;
-    foreach($parametres as $key=>$value)
-    {
-        if($key!="idU" && $key!="updateUtilisateur" && $key!="passUtilisateurBIS" && $value!='mdpImprobableuhhhhhhh')
-        {
-            if($value=="") $value=NULL;
-            
-            if($key=='passUtilisateur')
-            {
-                $passClair=$value;
-                $value=md5($value);
+    $passClair = NULL;
+    $emailLogin = NULL;
+    $nom = NULL;
+    $prenom = NULL;
+    $premierUpdate = checkPremierUpdate($idUtilisateur, $dbh);
+    $exec = true;
+    foreach ($parametres as $key => $value) {
+        if ($key != "idU" && $key != "updateUtilisateur" && $key != "passUtilisateurBIS" && $value != 'mdpImprobableuhhhhhhh') {
+            if ($value == "") $value = NULL;
+
+            if ($key == 'passUtilisateur') {
+                $passClair = $value;
+                $value = md5($value);
+            } elseif ($key == 'emailUtilisateur') {
+                $emailLogin = $value;
+            } elseif ($key == 'nomUtilisateur') {
+                $nom = $value;
+            } elseif ($key == 'prenomUtilisateur') {
+                $prenom = $value;
             }
-            elseif($key=='emailUtilisateur')
-            {
-                $emailLogin=$value;
-            }
-            elseif($key=='nomUtilisateur')
-            {
-                $nom=$value;
-            }
-            elseif($key=='prenomUtilisateur')
-            {
-                $prenom=$value;
-            }
-            
-            $reqUpdate = $dbh->prepare("UPDATE utilisateur set ".$key."=? where idUtilisateur=?");
+
+            $reqUpdate = $dbh->prepare("UPDATE utilisateur set " . $key . "=? where idUtilisateur=?");
             $reqUpdate->bindParam(1, $value);
             $reqUpdate->bindParam(2, $idUtilisateur);
 
-            $exec1=$reqUpdate->execute();
-            if(!$exec1) $exec=false;
+            $exec1 = $reqUpdate->execute();
+            if (!$exec1) $exec = false;
         }
-
     }
-    
-    if(intval($premierUpdate)==1)
-    {
-        $template="4";
-        $emailOrganisateur=$emailLogin;
-        $titre="Création de votre compte admin TRF";
-        $contenu="Bonjour ".$prenom." ".$nom.",<br><br>";
-        $contenu.="Votre compte organisateur sur la plateforme TRF vient d'être créé. Voici vos identifiants :<br><br> Login : <strong>".$emailLogin."</strong> <br> Mot de passe : <strong>".$passClair."</strong>";
-        $contenu.="<br><br>Vous pouvez dès à présent cliquer sur le lien ci dessous, vous connecter et accéder à la page de personnalisation de votre évènement.";
-        $libelleBouton="Accéder à l'interface administrateur";
-        $lienBouton="https://agenda.trailrunnerfoundation.com/admin/detailUtilisateur.php?idU=".$idUtilisateur;
 
-        sendmailRporg($emailOrganisateur,$titre ,$contenu, $libelleBouton,$lienBouton, $template);
-        
+    if (intval($premierUpdate) == 1) {
+        $template = "4";
+        $emailOrganisateur = $emailLogin;
+        $titre = "Création de votre compte admin TRF";
+        $contenu = "Bonjour " . $prenom . " " . $nom . ",<br><br>";
+        $contenu .= "Votre compte organisateur sur la plateforme TRF vient d'être créé. Voici vos identifiants :<br><br> Login : <strong>" . $emailLogin . "</strong> <br> Mot de passe : <strong>" . $passClair . "</strong>";
+        $contenu .= "<br><br>Vous pouvez dès à présent cliquer sur le lien ci dessous, vous connecter et accéder à la page de personnalisation de votre évènement.";
+        $libelleBouton = "Accéder à l'interface administrateur";
+        $lienBouton = "https://agenda.trailrunnerfoundation.com/admin/detailUtilisateur.php?idU=" . $idUtilisateur;
+
+        sendmailRporg($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template);
+
         $reqUpdate = $dbh->prepare("UPDATE utilisateur set creationUtilisateur=1 where idUtilisateur=?");
         $reqUpdate->bindParam(1, $idUtilisateur);
         $reqUpdate->execute();
     }
-    
+
     return $exec;
 }
 
 
 
 
-function insertCourse($libelleCourse,$dbh)
+function insertCourse($libelleCourse, $dbh)
 {
     $reqInsert = $dbh->prepare("INSERT INTO course (libelleCourse) VALUES (?)");
     $reqInsert->bindParam(1, $libelleCourse);
-    $etatExecution=$reqInsert->execute();
-    $idCourse=$dbh->lastInsertId();
+    $etatExecution = $reqInsert->execute();
+    $idCourse = $dbh->lastInsertId();
 
     return $idCourse;
 }
@@ -961,40 +971,41 @@ function uploadImage($target_dir, $nomInputFile, $type)
 }
 
 */
-    
-    
+
+
 
 
 function cleanString($chaine, $maj)
 {
-    if(trim($chaine)=='' || $chaine==NULL)
-    {
+    if (trim($chaine) == '' || $chaine == NULL) {
         return NULL;
-    }
-    else
-    {
+    } else {
         //SUPPRIMER TOUT ACCENT OU CARACTERE CHELOU SUR UNE LETTRE
         $a = array('À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'ß', 'à', 'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'Ā', 'ā', 'Ă', 'ă', 'Ą', 'ą', 'Ć', 'ć', 'Ĉ', 'ĉ', 'Ċ', 'ċ', 'Č', 'č', 'Ď', 'ď', 'Đ', 'đ', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'ę', 'Ě', 'ě', 'Ĝ', 'ĝ', 'Ğ', 'ğ', 'Ġ', 'ġ', 'Ģ', 'ģ', 'Ĥ', 'ĥ', 'Ħ', 'ħ', 'Ĩ', 'ĩ', 'Ī', 'ī', 'Ĭ', 'ĭ', 'Į', 'į', 'İ', 'ı', 'Ĳ', 'ĳ', 'Ĵ', 'ĵ', 'Ķ', 'ķ', 'Ĺ', 'ĺ', 'Ļ', 'ļ', 'Ľ', 'ľ', 'Ŀ', 'ŀ', 'Ł', 'ł', 'Ń', 'ń', 'Ņ', 'ņ', 'Ň', 'ň', 'ŉ', 'Ō', 'ō', 'Ŏ', 'ŏ', 'Ő', 'ő', 'Œ', 'œ', 'Ŕ', 'ŕ', 'Ŗ', 'ŗ', 'Ř', 'ř', 'Ś', 'ś', 'Ŝ', 'ŝ', 'Ş', 'ş', 'Š', 'š', 'Ţ', 'ţ', 'Ť', 'ť', 'Ŧ', 'ŧ', 'Ũ', 'ũ', 'Ū', 'ū', 'Ŭ', 'ŭ', 'Ů', 'ů', 'Ű', 'ű', 'Ų', 'ų', 'Ŵ', 'ŵ', 'Ŷ', 'ŷ', 'Ÿ', 'Ź', 'ź', 'Ż', 'ż', 'Ž', 'ž', 'ſ', 'ƒ', 'Ơ', 'ơ', 'Ư', 'ư', 'Ǎ', 'ǎ', 'Ǐ', 'ǐ', 'Ǒ', 'ǒ', 'Ǔ', 'ǔ', 'Ǖ', 'ǖ', 'Ǘ', 'ǘ', 'Ǚ', 'ǚ', 'Ǜ', 'ǜ', 'Ǻ', 'ǻ', 'Ǽ', 'ǽ', 'Ǿ', 'ǿ');
         $b = array('A', 'A', 'A', 'A', 'A', 'A', 'AE', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y', 's', 'a', 'a', 'a', 'a', 'a', 'a', 'ae', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'a', 'A', 'a', 'A', 'a', 'C', 'c', 'C', 'c', 'C', 'c', 'C', 'c', 'D', 'd', 'D', 'd', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'G', 'g', 'G', 'g', 'G', 'g', 'G', 'g', 'H', 'h', 'H', 'h', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'IJ', 'ij', 'J', 'j', 'K', 'k', 'L', 'l', 'L', 'l', 'L', 'l', 'L', 'l', 'l', 'l', 'N', 'n', 'N', 'n', 'N', 'n', 'n', 'O', 'o', 'O', 'o', 'O', 'o', 'OE', 'oe', 'R', 'r', 'R', 'r', 'R', 'r', 'S', 's', 'S', 's', 'S', 's', 'S', 's', 'T', 't', 'T', 't', 'T', 't', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'W', 'w', 'Y', 'y', 'Y', 'Z', 'z', 'Z', 'z', 'Z', 'z', 's', 'f', 'O', 'o', 'U', 'u', 'A', 'a', 'I', 'i', 'O', 'o', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'A', 'a', 'AE', 'ae', 'O', 'o');
-        $chaine=str_replace($a, $b, $chaine);
+        $chaine = str_replace($a, $b, $chaine);
 
         //ON MET TOUT EN MINUSCULE
-        $chaine=strtolower($chaine);
+        $chaine = strtolower($chaine);
 
         //ON NE GARDE QUE DES LETTRES DE A 0 Z
-        $email=NULL;
-        if($maj==2) $regex='0-9@\.\-_';
-        if($maj==3) $regex='0-9\'';
-        $chaine = preg_replace("/[^a-z".$regex."]+/", " ", $chaine);
+        $email = NULL;
+        if ($maj == 2) $regex = '0-9@\.\-_';
+        if ($maj == 3) $regex = '0-9\'';
+        $chaine = preg_replace("/[^a-z" . $regex . "]+/", " ", $chaine);
 
         //SUPPRESSION ESPACES EN TROP
         $chaine = trim($chaine);
-        if($maj==1 || $maj==3){$chaine=strtoupper($chaine);}else{$chaine=ucwords($chaine);}
-        if($maj==2){$chaine=strtolower($chaine);}
+        if ($maj == 1 || $maj == 3) {
+            $chaine = strtoupper($chaine);
+        } else {
+            $chaine = ucwords($chaine);
+        }
+        if ($maj == 2) {
+            $chaine = strtolower($chaine);
+        }
         return $chaine;
     }
-
-
 }
 
 
@@ -1170,4 +1181,3 @@ function getTdb($idLudotheque, $dbh)
 }
 
 */
-?>
