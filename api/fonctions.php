@@ -3,65 +3,10 @@
 
 function sendmailRporg($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template)
 {
-    //*********************************************************************
-    // ENVOI EMAIL
-    //*********************************************************************
-    $ch = curl_init();
-    $params = array(
-        "emailExpediteur" => "contact@trailrunnerfoundation.com",
-        "nomExpediteur" => "Trail Runner Foundation",
-        "emailDestinataire" => $emailOrganisateur,
-        "numeroTemplate" => $template,
-        "titre" => $titre,
-        "contenu" => $contenu,
-        "lienbouton" => $lienBouton,
-        "libellebouton" => $libelleBouton,
-        "sujet" => "votre compte Trail Runner Foundation"
-    );
-
-    try {
-
-        curl_setopt($ch, CURLOPT_URL, "https://remyperret.org/api/sendmail/");
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-        curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 1);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-
-        $response = curl_exec($ch);
-
-        if (curl_errno($ch)) {
-            echo curl_error($ch);
-            die();
-        }
-
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if ($http_code == intval(200)) {
-            $messageConfirmation = "Message reçu. Nous vous répondons dans les plus bref délais.";
-        } else {
-            echo "Ressource introuvable : " . $http_code;
-        }
-    } catch (\Throwable $th) {
-        throw $th;
-    } finally {
-        curl_close($ch);
-    }
-
-    $messageConfirmation = "Message reçu. Nous vous répondons dans les plus bref délais.";
-    return $messageConfirmation;
-}
-
-
-
-function sendMailMailjet($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template)
-{
     // Vos identifiants Mailjet
     $apiKey = 'f5cce6f3c1cd07ff3c7045e0007a663e';
     $apiSecret = 'b50ae69f9d0e26ff38b53ee6d37fcfde';
+    $template = 6815714;
 
     // Endpoint Mailjet pour l'envoi de mails via l'API v3.1
     $url = "https://api.mailjet.com/v3.1/send";
@@ -121,14 +66,14 @@ function sendMailMailjet($emailOrganisateur, $titre, $contenu, $libelleBouton, $
             throw new Exception("Erreur lors de l'envoi de l'email, code HTTP : " . $http_code . " Réponse : " . $response);
         }
     } catch (Exception $e) {
-        // Vous pouvez loguer l'erreur ici selon votre système de logs
         curl_close($ch);
         throw $e;
     }
 
     curl_close($ch);
 
-    return "Message envoyé avec succès via Mailjet.";
+    // Renvoie le message de confirmation en cas de succès
+    return "Message reçu. Nous vous répondons dans les plus bref délais.";
 }
 
 

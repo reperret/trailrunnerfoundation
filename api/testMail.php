@@ -1,23 +1,29 @@
 <?php
-// Inclure le fichier de fonctions
+// Inclure le fichier des fonctions
 require_once 'fonctions.php';
 
-// Définir les paramètres pour l'envoi de l'email
-$emailOrganisateur = "destinataire@example.com";
-$titre            = "Bienvenue sur Trail Runner Foundation";
-$contenu          = "Nous vous remercions pour votre inscription.";
-$libelleBouton    = "Accéder à mon compte";
-$lienBouton       = "https://google.fr";
-$template         = 123456; // Remplacez par l'ID de votre template Mailjet
+// Récupérer l'email destinataire depuis la variable GET ou définir une valeur par défaut
+$emailOrganisateur = isset($_GET['email']) ? filter_var($_GET['email'], FILTER_SANITIZE_EMAIL) : "destinataire@example.com";
 
-// Logger les actions (ici, nous utilisons error_log pour simplifier, vous pouvez adapter à votre système de logs)
-error_log("Début de l'envoi de l'email à " . $emailOrganisateur);
+// Définir les autres paramètres du mail
+$titre         = "Bienvenue sur Trail Runner Foundation";
+$contenu       = "Nous vous remercions pour votre inscription. Veuillez trouver toutes les informations nécessaires dans cet email.";
+$libelleBouton = "Accéder à mon compte";
+$lienBouton    = "https://trailrunnerfoundation.com/mon-compte";
+$template      = 6815714; // ID du template Mailjet fourni
 
+// Obtenir la date courante pour le log
+$date = date("Y-m-d H:i:s");
+
+// Logger le début de l'envoi
+error_log("[$date] Début de l'envoi de l'email à $emailOrganisateur");
+
+// Appel de la fonction d'envoi avec gestion des erreurs
 try {
-    $resultat = sendMailMailjet($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template);
-    error_log("Envoi réussi : " . $resultat);
-    echo "Envoi réussi : " . $resultat;
+    $resultat = sendmailRporg($emailOrganisateur, $titre, $contenu, $libelleBouton, $lienBouton, $template);
+    error_log("[$date] Envoi réussi à $emailOrganisateur : $resultat");
+    echo "[$date] Envoi réussi à $emailOrganisateur : $resultat";
 } catch (Exception $e) {
-    error_log("Erreur lors de l'envoi de l'email : " . $e->getMessage());
-    echo "Erreur lors de l'envoi de l'email : " . $e->getMessage();
+    error_log("[$date] Erreur lors de l'envoi de l'email à $emailOrganisateur : " . $e->getMessage());
+    echo "[$date] Erreur lors de l'envoi de l'email à $emailOrganisateur : " . $e->getMessage();
 }
